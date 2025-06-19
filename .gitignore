@@ -1,0 +1,93 @@
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# Python编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 分发/打包
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 单元测试 / 覆盖率报告
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# 环境变量文件
+.env
+.venv
+.ENV
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# macOS系统文件
+.DS_Store
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+
+# 输出文件夹
+url_img/
+Web_Saver_Output/
+/tmp/Web_Saver_Output/
+
+# 测试文件
+test.csv
+*.csv
+
+# Azure部署文件（可选，如果不需要部署到Azure可以保留）
+# .azure/
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 备份文件
+*.bak
+*.backup 
