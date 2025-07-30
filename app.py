@@ -57,13 +57,9 @@ def capture_full_page(driver, url, index, save_folder):
         window_height = 1200
         driver.set_window_size(window_width, window_height)
         
-        # 获取页面实际高度，并限制最大值
+        # 获取页面实际高度，不再限制最大值
         total_height = driver.execute_script("return document.body.scrollHeight")
-        if total_height > 10000:
-            print(f"页面高度异常({total_height}px)，限制为10000px")
-            total_height = 10000
-        
-        print(f"页面高度: {total_height}px, 窗口大小: {window_width}x{window_height}px")
+        print(f"页面总高度: {total_height}px, 窗口大小: {window_width}x{window_height}px")
         
         # 隐藏固定header和footer，只截取内容
         driver.execute_script("""
@@ -74,16 +70,21 @@ def capture_full_page(driver, url, index, save_folder):
             }
         """)
         
-        # 从0像素开始截图，覆盖整个页面
+        # 计算截图数量和预估时间
         scroll_step = 1000  # 使用1000px步长
+        estimated_screenshots = (total_height + scroll_step - 1) // scroll_step  # 向上取整
+        estimated_time_per_screenshot = 3  # 每张截图预估3秒（包括滚动和截图时间）
+        total_estimated_time = estimated_screenshots * estimated_time_per_screenshot
         
-        print(f"截取完整页面内容: (0-{total_height}px)")
+        print(f"预估截图数量: {estimated_screenshots}张")
+        print(f"预估总时间: {total_estimated_time}秒 ({total_estimated_time/60:.1f}分钟)")
+        print(f"开始截取完整页面内容: (0-{total_height}px)")
         
         temp_screenshots = []
         screen_count = 0
         current_position = 0
         
-        while current_position < total_height and screen_count < 15:  # 限制最多15张
+        while current_position < total_height:
             driver.execute_script(f"window.scrollTo(0, {current_position})")
             time.sleep(2)
             
