@@ -14,6 +14,13 @@ from datetime import datetime
 import uuid
 import tempfile
 import shutil
+import pytesseract
+import easyocr
+import re
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import glob
 
 # 全局变量，用于清理临时文件
 temp_files_to_cleanup = []
@@ -45,6 +52,112 @@ def init_browser():
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+def extract_text_from_page(driver):
+    """直接从页面提取文本内容"""
+    try:
+        # 等待页面加载完成
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        
+        # 获取页面文本
+        body_text = driver.find_element(By.TAG_NAME, "body").text
+        
+        # 获取页面标题
+        title = driver.title
+        
+        # 获取所有文本元素，保持结构
+        text_elements = driver.find_elements(By.XPATH, "//*[text()]")
+        
+        structured_text = []
+        for element in text_elements:
+            tag_name = element.tag_name
+            text = element.text.strip()
+            if text:
+                if tag_name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                    structured_text.append(f"标题: {text}")
+                elif tag_name == 'p':
+                    structured_text.append(text)
+                elif tag_name in ['li']:
+                    structured_text.append(f"• {text}")
+        
+        return {
+            'title': title,
+            'body_text': body_text,
+            'structured_text': structured_text
+        }
+    except Exception as e:
+        print(f"文本提取失败: {e}")
+        return {'title': '', 'body_text': '', 'structured_text': []}
+
+def ocr_process_image(image_path):
+    """使用OCR处理图片"""
+    try:
+        # 使用EasyOCR进行OCR处理
+        reader = easyocr.Reader(['en', 'ch_sim'])  # 支持英文和中文
+        results = reader.readtext(image_path)
+        
+        # 提取文本
+        text_lines = []
+        for (bbox, text, prob) in results:
+            if prob > 0.5:  # 只保留置信度大于50%的文本
+                text_lines.append(text.strip())
+        
+        return '\n'.join(text_lines)
+    except Exception as e:
+        print(f"OCR处理失败: {e}")
+        return ""
+
+def create_rtf_document(title, content, metadata=None):
+    """创建RTF文档"""
+    try:
+        # 清理标题中的特殊字符
+        safe_title = re.sub(r'[^\w\s-]', '', title)[:50]
+        
+        # 清理内容中的特殊字符
+        clean_content = content.replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
+        
+        # 创建RTF内容
+        rtf_content = f"""{{\\rtf1\\ansi\\deff0
+{{\\fonttbl {{\\f0 Times New Roman;}}
+{{\\f1 Arial;}}
+}}
+\\f0\\fs24
+\\b {safe_title}\\b0\\par
+\\par
+\\fs20
+{clean_content}
+\\par
+}}"""
+        
+        return rtf_content
+    except Exception as e:
+        print(f"RTF生成失败: {e}")
+        return None
+
+def merge_text_content(direct_text, ocr_text):
+    """合并直接文本提取和OCR文本"""
+    merged_content = []
+    
+    # 添加直接提取的文本
+    if direct_text.get('title'):
+        merged_content.append(f"页面标题: {direct_text['title']}")
+        merged_content.append("")
+    
+    if direct_text.get('structured_text'):
+        merged_content.extend(direct_text['structured_text'])
+        merged_content.append("")
+    
+    # 添加OCR文本（如果与直接文本不同）
+    if ocr_text and ocr_text.strip():
+        # 简单的去重逻辑
+        direct_text_combined = ' '.join(direct_text.get('structured_text', []))
+        if ocr_text.strip() not in direct_text_combined:
+            merged_content.append("OCR识别内容:")
+            merged_content.append(ocr_text)
+    
+    return '\n'.join(merged_content)
 
 def capture_full_page(driver, url, index, save_folder):
     try:
@@ -116,20 +229,49 @@ def capture_full_page(driver, url, index, save_folder):
         
         # 拼接截图
         if len(temp_screenshots) > 1:
-            print(f"拼接完成: {temp_screenshots[0]}")
+            print(f"开始拼接 {len(temp_screenshots)} 张截图...")
             final_image = stitch_screenshots(temp_screenshots, os.path.join(save_folder, f'final_screenshot_{index}.png'))
         else:
             final_image = temp_screenshots[0]
         
-        # 转换为PDF
+        # 提取文本内容
+        print("正在提取页面文本...")
+        direct_text = extract_text_from_page(driver)
+        
+        # OCR处理截图
+        print("正在进行OCR识别...")
+        ocr_text = ""
+        if temp_screenshots:
+            ocr_text = ocr_process_image(temp_screenshots[0])  # 使用第一张截图进行OCR
+        
+        # 合并文本内容
+        final_content = merge_text_content(direct_text, ocr_text)
+        
+        # 生成RTF文件
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        rtf_name = f'{timestamp}_{index}_{safe_title}.rtf'
+        rtf_path = os.path.join(save_folder, rtf_name)
+        
+        rtf_content = create_rtf_document(page_title, final_content)
+        if rtf_content:
+            with open(rtf_path, 'w', encoding='utf-8') as f:
+                f.write(rtf_content)
+            print(f"RTF文件已生成: {rtf_path}")
+            print(f"RTF已保存: {rtf_path}")
+        else:
+            print("RTF生成失败")
+            rtf_path = None
+        
+        # 可选：同时生成PDF（保持向后兼容）
         pdf_name = f'{timestamp}_{index}_{safe_title}.pdf'
         pdf_path = os.path.join(save_folder, pdf_name)
-        
         convert_to_pdf([final_image], pdf_path)
-        print(f"PDF已保存: {pdf_path}")
+        print(f"PDF文件已生成: {pdf_path}")
         
-        return pdf_path, page_title
+        # 清理分块文件
+        cleanup_chunk_files(save_folder, index)
+        
+        return rtf_path, page_title
         
     except Exception as e:
         error_msg = str(e)
@@ -148,7 +290,7 @@ def capture_full_page(driver, url, index, save_folder):
         return None, None
 
 def stitch_screenshots(screenshot_files, output_path):
-    """拼接多张截图"""
+    """拼接多张截图，处理大图像限制"""
     images = []
     for file in screenshot_files:
         if os.path.exists(file):
@@ -162,20 +304,72 @@ def stitch_screenshots(screenshot_files, output_path):
     total_height = sum(img.height for img in images)
     max_width = max(img.width for img in images)
     
-    # 创建新图像
-    stitched_image = Image.new('RGB', (max_width, total_height))
+    print(f"图像拼接信息: 总高度={total_height}px, 最大宽度={max_width}px")
     
-    # 拼接图像
-    y_offset = 0
-    for img in images:
-        stitched_image.paste(img, (0, y_offset))
-        y_offset += img.height
+    # 检查图像尺寸是否超过PIL限制（65500像素）
+    if total_height > 65000:  # 留一些安全边距
+        print(f"⚠️  图像总高度({total_height}px)超过PIL限制，将分块处理")
+        
+        # 分块处理：每块最多60000像素高度
+        chunk_height = 60000
+        chunks = []
+        current_chunk = []
+        current_height = 0
+        
+        for img in images:
+            if current_height + img.height > chunk_height:
+                # 保存当前块
+                if current_chunk:
+                    chunks.append(current_chunk)
+                # 开始新块
+                current_chunk = [img]
+                current_height = img.height
+            else:
+                current_chunk.append(img)
+                current_height += img.height
+        
+        # 添加最后一个块
+        if current_chunk:
+            chunks.append(current_chunk)
+        
+        # 处理每个块
+        chunk_files = []
+        for i, chunk in enumerate(chunks):
+            chunk_height = sum(img.height for img in chunk)
+            chunk_width = max(img.width for img in chunk)
+            
+            # 创建块图像
+            chunk_image = Image.new('RGB', (chunk_width, chunk_height))
+            y_offset = 0
+            for img in chunk:
+                chunk_image.paste(img, (0, y_offset))
+                y_offset += img.height
+            
+            # 保存块文件
+            chunk_path = output_path.replace('.png', f'_chunk_{i}.png')
+            chunk_image.save(chunk_path)
+            chunk_files.append(chunk_path)
+            print(f"已保存图像块 {i+1}: {chunk_path} ({chunk_width}x{chunk_height})")
+        
+        # 返回第一个块作为主要输出（用于PDF生成）
+        return chunk_files[0] if chunk_files else None
     
-    stitched_image.save(output_path)
-    return output_path
+    else:
+        # 正常拼接
+        print(f"正常拼接图像: {max_width}x{total_height}")
+        stitched_image = Image.new('RGB', (max_width, total_height))
+        
+        # 拼接图像
+        y_offset = 0
+        for img in images:
+            stitched_image.paste(img, (0, y_offset))
+            y_offset += img.height
+        
+        stitched_image.save(output_path)
+        return output_path
 
 def convert_to_pdf(screenshot_files, pdf_path):
-    """将截图转换为PDF"""
+    """将截图转换为PDF，处理大图像限制"""
     images = []
     for file in screenshot_files:
         if os.path.exists(file):
@@ -184,9 +378,41 @@ def convert_to_pdf(screenshot_files, pdf_path):
                 img = img.convert('RGB')
             images.append(img)
     
-    if images:
-        images[0].save(pdf_path, 'PDF', save_all=True, append_images=images[1:])
-        print(f"PDF文件已生成: {pdf_path}")
+    if not images:
+        print("❌ 没有有效的图像文件用于PDF生成")
+        return
+    
+    # 检查是否有分块图像
+    chunk_files = [f for f in screenshot_files if '_chunk_' in f]
+    if chunk_files:
+        print(f"发现分块图像文件: {len(chunk_files)} 个")
+        # 使用分块图像生成PDF
+        chunk_images = []
+        for chunk_file in sorted(chunk_files):  # 按文件名排序
+            if os.path.exists(chunk_file):
+                img = Image.open(chunk_file)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                chunk_images.append(img)
+        
+        if chunk_images:
+            print(f"使用 {len(chunk_images)} 个分块图像生成PDF")
+            chunk_images[0].save(pdf_path, 'PDF', save_all=True, append_images=chunk_images[1:])
+            print(f"PDF文件已生成: {pdf_path}")
+        else:
+            print("❌ 分块图像加载失败")
+    else:
+        # 正常处理
+        if images:
+            # 检查图像尺寸
+            total_height = sum(img.height for img in images)
+            if total_height > 65000:
+                print(f"⚠️  图像总高度({total_height}px)较大，PDF生成可能较慢")
+            
+            images[0].save(pdf_path, 'PDF', save_all=True, append_images=images[1:])
+            print(f"PDF文件已生成: {pdf_path}")
+        else:
+            print("❌ 没有有效的图像文件")
 
 def cleanup_temp_files(files):
     """清理临时文件"""
@@ -196,6 +422,21 @@ def cleanup_temp_files(files):
                 os.remove(file)
         except Exception as e:
             print(f"清理文件失败 {file}: {e}")
+
+def cleanup_chunk_files(save_folder, index):
+    """清理分块图像文件"""
+    try:
+        chunk_pattern = os.path.join(save_folder, f'final_screenshot_{index}_chunk_*.png')
+        chunk_files = glob.glob(chunk_pattern)
+        for chunk_file in chunk_files:
+            try:
+                if os.path.exists(chunk_file):
+                    os.remove(chunk_file)
+                    print(f"清理分块文件: {chunk_file}")
+            except Exception as e:
+                print(f"清理分块文件失败 {chunk_file}: {e}")
+    except Exception as e:
+        print(f"清理分块文件时出错: {e}")
 
 def process_urls_parallel(urls):
     """并行处理多个URL"""
@@ -225,7 +466,7 @@ def process_urls_parallel(urls):
             except Exception as e:
                 print(f"❌ {url} 处理出错: {e}")
     
-    print(f"\n所有网页已保存为PDF: {len(results)} 个文件")
+    print(f"\n所有网页已保存为RTF: {len(results)} 个文件")
     return results
 
 def process_single_url(url, index, save_folder):
@@ -235,8 +476,8 @@ def process_single_url(url, index, save_folder):
     driver = None
     try:
         driver = init_browser()
-        pdf_path, title = capture_full_page(driver, url, index, save_folder)
-        return pdf_path if pdf_path else None
+        rtf_path, title = capture_full_page(driver, url, index, save_folder)
+        return rtf_path if rtf_path else None
     except Exception as e:
         print(f"处理URL时出错: {e}")
         return None
@@ -255,7 +496,7 @@ def main():
     
     try:
         results = process_urls_parallel(urls)
-        print(f"\n处理完成！生成了 {len(results)} 个PDF文件")
+        print(f"\n处理完成！生成了 {len(results)} 个RTF文件")
     except KeyboardInterrupt:
         print("\n程序被用户中断")
     except Exception as e:
