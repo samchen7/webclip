@@ -48,9 +48,14 @@ def init_browser():
 
 def capture_full_page(driver, url, index, save_folder):
     try:
+        # 清理URL（移除可能的引号）
+        url = url.strip().strip('"').strip("'")
+        
         # 自动补全协议
         if not url.startswith('http://') and not url.startswith('https://'):
             url = 'http://' + url
+            
+        print(f"正在访问: {url}")
         driver.get(url)
         time.sleep(3)
         
@@ -127,7 +132,19 @@ def capture_full_page(driver, url, index, save_folder):
         return pdf_path, page_title
         
     except Exception as e:
-        print(f"处理URL时出错: {e}")
+        error_msg = str(e)
+        if "ERR_NAME_NOT_RESOLVED" in error_msg:
+            print(f"❌ 网络连接失败: 无法访问 {url}")
+            print("   可能原因: 网络连接问题、域名不存在、防火墙阻止")
+            print("   建议: 检查网络连接，确认URL是否正确")
+        elif "ERR_CONNECTION_TIMED_OUT" in error_msg:
+            print(f"❌ 连接超时: {url}")
+            print("   建议: 稍后重试，或检查网络连接")
+        elif "ERR_CONNECTION_REFUSED" in error_msg:
+            print(f"❌ 连接被拒绝: {url}")
+            print("   可能原因: 网站暂时不可用")
+        else:
+            print(f"❌ 处理URL时出错: {error_msg}")
         return None, None
 
 def stitch_screenshots(screenshot_files, output_path):
