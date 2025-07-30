@@ -1,22 +1,9 @@
 # Web Screenshot Tool
 
-一个强大的命令行网页截图工具，可以智能截取网页内容并自动拼接为PDF文件，自动去除重复的页面结构元素。现在支持Web界面、并行处理和多用户并发API！
+一个强大的命令行网页截图工具，可以智能截取网页内容并自动拼接为PDF文件，自动去除重复的页面结构元素。
 
-## 🚀 最新功能
+## 🚀 功能特性
 
-- 🌐 **Web界面**：提供友好的Web界面，支持多URL提交和实时进度查看
-- ⚡ **并行处理**：支持同时处理多个URL，大幅提升处理速度
-- 👥 **多用户API**：支持多用户并发处理，每个用户都有独立的用户ID和任务ID
-- 📊 **智能预估**：自动计算页面高度和预估处理时间
-- 🖼️ **无限制截图**：移除15张截图限制，支持任意长度页面
-- 📏 **真实高度检测**：显示页面实际像素高度，无10000px限制
-- ⚡ **性能优化**：1000px步长，平衡效率和内容连贯性
-
-## 功能特性
-
-- 🌐 **Web界面**：提供直观的Web界面，支持多URL批量处理
-- ⚡ **并行处理**：使用多线程技术，同时处理多个URL
-- 👥 **多用户API**：支持多用户并发处理，用户隔离和错误隔离
 - 🖼️ **智能内容截图**：自动隐藏header、footer、导航栏等固定元素，只截取页面主要内容
 - 📄 **自动PDF生成**：将截图自动拼接为PDF文件
 - 🔄 **智能去重**：避免重复的页面结构，确保内容连贯
@@ -25,7 +12,7 @@
 - ⚡ **高效处理**：优化的截图策略，支持长页面处理
 - 📊 **智能预估**：显示页面总高度和预估处理时间
 - 🚫 **无限制截图**：支持任意长度的页面，无截图数量限制
-- 📱 **实时进度**：Web界面显示实时处理进度和状态
+- ⚡ **并行处理**：支持同时处理多个URL，大幅提升处理速度
 
 ## 安装依赖
 
@@ -35,56 +22,19 @@ pip install -r requirements.txt
 
 ## 使用方法
 
-### Web界面（推荐）
-
-1. 启动Web服务器：
-```bash
-python app.py
-```
-
-2. 在浏览器中访问：`http://localhost:5001`
-
-3. 在Web界面中输入要截图的URL（每行一个），点击"开始截图"
-
-4. 等待处理完成，点击"下载PDF"获取结果
-
-### API接口（多用户并发）
-
-#### 提交任务
-```bash
-curl -X POST http://localhost:5001/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "user_001",
-    "urls": ["https://example.com", "https://httpbin.org/html"]
-  }'
-```
-
-#### 查询状态
-```bash
-curl http://localhost:5001/api/status/user_001_12345678-1234-1234-1234-123456789abc
-```
-
-#### 下载PDF
-```bash
-curl -O http://localhost:5001/download/user_001_12345678-1234-1234-1234-123456789abc/0
-```
-
-### 命令行模式
-
-#### 基本用法
+### 基本用法
 
 ```bash
 python app.py "https://example.com"
 ```
 
-#### 多个网页
+### 多个网页
 
 ```bash
 python app.py "https://example.com" "https://google.com" "https://github.com"
 ```
 
-#### 处理特殊字符
+### 处理特殊字符
 
 如果URL包含特殊字符（如`&`），请用引号包裹：
 
@@ -92,75 +42,12 @@ python app.py "https://example.com" "https://google.com" "https://github.com"
 python app.py "https://www.google.com/search?q=test&source=hp"
 ```
 
-#### 处理长页面
+### 处理长页面
 
 程序会自动处理任意长度的页面：
 
 ```bash
 python app.py "https://long-article-blog.com"
-```
-
-## Web界面功能
-
-### 主要特性
-- **批量处理**：一次提交多个URL，自动并行处理
-- **实时进度**：显示处理进度和当前状态
-- **自动下载**：处理完成后自动提供PDF下载链接
-- **错误处理**：显示详细的错误信息和处理状态
-
-### 使用步骤
-1. 访问 `http://localhost:5001`
-2. 在文本框中输入URL，每行一个
-3. 点击"开始截图"按钮
-4. 等待处理完成（会显示实时进度）
-5. 点击"下载PDF"获取结果文件
-
-## API接口功能
-
-### 多用户并发特性
-- **用户隔离**：每个用户都有独立的用户ID和任务ID
-- **并发处理**：支持多个用户同时提交任务
-- **状态跟踪**：实时显示每个任务的进度
-- **错误隔离**：单个任务失败不影响其他任务
-- **点对点下载**：每个URL都有独立的PDF和下载链接
-
-### API端点
-- `POST /api/submit` - 提交任务
-- `GET /api/status/{task_id}` - 查询状态
-- `GET /download/{task_id}/{result_index}` - 下载PDF
-
-### 使用示例
-
-#### Python示例
-```python
-import requests
-import time
-
-# 提交任务
-data = {
-    "user_id": "user_001",
-    "urls": ["https://example.com", "https://httpbin.org/html"]
-}
-response = requests.post("http://localhost:5001/api/submit", json=data)
-result = response.json()
-
-if result['success']:
-    task_id = result['task_id']
-    print(f"任务提交成功: {task_id}")
-    
-    # 轮询状态
-    while True:
-        status = requests.get(f"http://localhost:5001/api/status/{task_id}").json()
-        print(f"进度: {status['progress']}%")
-        
-        if status['status'] == 'completed':
-            print("任务完成！")
-            break
-        elif status['status'] == 'failed':
-            print(f"任务失败: {status['error']}")
-            break
-        
-        time.sleep(2)
 ```
 
 ## 并行处理说明
@@ -177,59 +64,12 @@ if result['success']:
 
 ## 输出示例
 
-### Web界面输出
-```
-任务ID: 12345678-1234-1234-1234-123456789abc
-状态: 处理中 (2/3 URL)
-进度: 66%
-```
-
-### API输出
-
-#### 提交任务响应
-```json
-{
-    "success": true,
-    "task_id": "user_001_12345678-1234-1234-1234-123456789abc",
-    "user_id": "user_001",
-    "urls_count": 2,
-    "message": "任务已提交，任务ID: user_001_12345678-1234-1234-1234-123456789abc"
-}
-```
-
-#### 状态查询响应
-```json
-{
-    "task_id": "user_001_12345678-1234-1234-1234-123456789abc",
-    "status": "completed",
-    "progress": 100.0,
-    "processed": 2,
-    "total_urls": 2,
-    "url_status": [
-        {
-            "url": "https://example.com",
-            "index": 1,
-            "status": "completed",
-            "title": "Example Domain",
-            "pdf_name": "20250730_134536_1_Example Domain.pdf",
-            "download_url": "/download/user_001_20250730_134536/1",
-            "error": null
-        },
-        {
-            "url": "https://httpbin.org/html",
-            "index": 2,
-            "status": "completed",
-            "title": "HTML",
-            "pdf_name": "20250730_134537_2_HTML.pdf",
-            "download_url": "/download/user_001_20250730_134537/2",
-            "error": null
-        }
-    ]
-}
-```
-
 ### 命令行输出
 ```
+准备处理 3 个URL...
+开始并行处理 3 个URL...
+保存目录: /Users/sam/Desktop/web-saver
+
 处理URL 1: https://example.com
 页面总高度: 3500px, 窗口大小: 1200x1200px
 预估截图数量: 4张
@@ -239,35 +79,21 @@ if result['success']:
 截图 2: 位置 1000/3500px, 步长 1000px
 截图 3: 位置 2000/3500px, 步长 1000px
 截图 4: 位置 3000/3500px, 步长 1000px
-拼接完成: /path/to/screenshot_1.png
-所有网页已保存为PDF: 20240730_143022_Example_Domain.pdf
+PDF文件已生成: /Users/sam/Desktop/web-saver/20240730_143022_1_Example_Domain.pdf
+PDF已保存: /Users/sam/Desktop/web-saver/20240730_143022_1_Example_Domain.pdf
+✅ https://example.com 处理完成
+
+所有网页已保存为PDF: 3 个文件
+处理完成！生成了 3 个PDF文件
 ```
 
 ## 输出文件
 
 程序会在当前目录生成以下文件：
 
-- `YYYYMMDD_HHMMSS_页面标题.pdf` - 主要的PDF文件，文件名包含时间戳和页面标题
+- `YYYYMMDD_HHMMSS_序号_页面标题.pdf` - PDF文件，文件名包含时间戳、序号和页面标题
 
 ## 技术特性
-
-### Web界面技术
-- **Flask框架**：轻量级Web应用框架
-- **实时更新**：使用AJAX技术实现实时进度更新
-- **异步处理**：后台线程处理，不阻塞Web界面
-- **文件管理**：自动管理临时文件和下载链接
-
-### API接口技术
-- **RESTful API**：标准的REST API设计
-- **多用户支持**：用户隔离和任务隔离
-- **并发处理**：支持多用户同时使用
-- **状态管理**：实时任务状态跟踪
-
-### 并行处理技术
-- **ThreadPoolExecutor**：Python标准库多线程池
-- **任务队列**：智能任务分配和状态管理
-- **资源管理**：自动清理浏览器实例和临时文件
-- **错误隔离**：单个URL失败不影响其他URL处理
 
 ### 智能去重策略
 - 自动隐藏固定定位的header、footer、导航栏等元素
@@ -308,7 +134,6 @@ if result['success']:
 - `selenium==4.26.1` - 浏览器自动化
 - `webdriver-manager==4.0.2` - Chrome驱动管理
 - `pillow==11.0.0` - 图像处理
-- `flask==3.0.0` - Web应用框架
 
 ## 性能说明
 
@@ -316,11 +141,6 @@ if result['success']:
 - 最多同时处理3个URL
 - 每个URL独立处理，互不影响
 - 总处理时间约等于最慢URL的处理时间
-
-### 多用户并发性能
-- 支持多个用户同时提交任务
-- 每个用户任务独立处理
-- 用户隔离，错误隔离
 
 ### 处理时间预估
 - 每张截图约需3秒（包括滚动和截图时间）
@@ -343,10 +163,7 @@ if result['success']:
 3. **内存使用**：长页面截图可能占用较多内存，并行处理时更明显
 4. **文件大小**：生成的PDF文件可能较大，建议检查磁盘空间
 5. **处理时间**：长页面处理时间较长，请耐心等待
-6. **Web界面**：建议使用现代浏览器访问Web界面
-7. **并发限制**：默认最多同时处理3个URL，可根据系统性能调整
-8. **端口设置**：默认使用端口5001，如果被占用可以修改代码中的端口号
-9. **API使用**：建议为每个用户使用唯一的用户ID，便于管理和调试
+6. **并发限制**：默认最多同时处理3个URL，可根据系统性能调整
 
 ## 故障排除
 
@@ -372,20 +189,10 @@ if result['success']:
    - 这是正常现象，程序会显示预估时间
    - 可以按Ctrl+C中断处理
 
-6. **Web界面无法访问**
-   - 确保端口5001未被占用
-   - 检查防火墙设置
-   - 尝试访问 `http://127.0.0.1:5001`
-
-7. **并行处理失败**
+6. **并行处理失败**
    - 检查系统内存是否充足
    - 减少同时处理的URL数量
    - 检查网络连接稳定性
-
-8. **API接口问题**
-   - 检查API端点是否正确
-   - 确保请求格式正确
-   - 查看服务器日志获取详细错误信息
 
 ## 开发说明
 
@@ -394,8 +201,6 @@ if result['success']:
 - `stitch_screenshots()` - 图片拼接
 - `convert_to_pdf()` - PDF生成
 - `process_urls_parallel()` - 并行处理多个URL
-- Web界面路由和状态管理
-- API接口和用户管理
 
 ### 优化策略
 - 使用JavaScript隐藏固定定位元素
@@ -403,18 +208,23 @@ if result['success']:
 - 1000px步长，平衡效率和内容连贯性
 - 自动计算截图数量，智能预估处理时间
 - 多线程并行处理，提升整体效率
-- 用户隔离和错误隔离，确保系统稳定性
 
 ## 更新日志
 
+### v5.0
+- ✅ 纯命令行版本：移除所有Web界面和API功能
+- ✅ 简化架构：专注于命令行使用体验
+- ✅ 并行处理：支持同时处理多个URL
+- ✅ 智能去重：自动隐藏固定元素
+- ✅ 无限制截图：支持任意长度页面
+
 ### v4.0
-- ✅ 多用户API：支持多用户并发处理，每个用户都有独立的用户ID和任务ID
-- ✅ 用户隔离：不同用户的任务完全隔离，错误隔离
+- ✅ 多用户API：支持多用户并发处理
+- ✅ 用户隔离：不同用户的任务完全隔离
 - ✅ API接口：提供完整的RESTful API接口
 - ✅ 并发处理：支持多个用户同时使用系统
 - ✅ 状态管理：实时跟踪每个用户的任务状态
 - ✅ 点对点下载：每个URL都有独立的PDF和下载链接
-- ✅ 精确返回：用户可以精确下载特定的PDF文件
 
 ### v3.0
 - ✅ Web界面：提供友好的Web界面，支持多URL批量处理
@@ -450,6 +260,17 @@ MIT License
 2. 提交Issue描述问题
 3. 提供详细的错误信息和复现步骤
 
-## API文档
+## 测试
 
-详细的API文档请参考 `API_DOCUMENTATION.md` 文件。
+运行测试脚本验证功能：
+
+```bash
+python test_command_line.py
+```
+
+测试包括：
+- 单个URL处理
+- 多个URL并行处理
+- 无效URL处理
+- 帮助信息显示
+- PDF文件生成
