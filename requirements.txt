@@ -3,3 +3,4 @@ webdriver-manager==4.0.2
 pillow==11.0.0
 pytesseract==0.3.10
 easyocr==1.7.0
+
