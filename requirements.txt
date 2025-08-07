@@ -1,6 +1,17 @@
-selenium==4.26.1
-webdriver-manager==4.0.2
-pillow==11.0.0
-pytesseract==0.3.10
-easyocr==1.7.0
+fastapi>=0.112
+uvicorn[standard]>=0.30
+requests>=2.32
+beautifulsoup4>=4.12
+lxml>=5.1
+readability-lxml>=0.8
+pydantic>=2.7
+pydantic-settings>=2.2
+python-docx>=1.1
+Pillow>=10.2
+easyocr>=1.7
+torch>=2.2 ; platform_system!="Darwin"
+torch>=2.2 ; platform_system=="Darwin"
+# 可选：浏览器/截图（按需安装）
+selenium>=4.20 ; extra == "browser"
+playwright>=1.46 ; extra == "browser"
 

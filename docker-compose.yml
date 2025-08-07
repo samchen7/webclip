@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  webclip:
+    build: .
+    ports: ["8080:8080"]
+    env_file: env.example
+    volumes:
+      - ./data:/app/data
+    # 如果需要 NVIDIA GPU 加速，取消注释以下两行，并确保主机装了 nvidia-container-toolkit
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu] 
